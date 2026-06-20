@@ -34,6 +34,10 @@ function on_clipboard_changed(text) {
 
 // Called on Ctrl+Shift+V
 function on_hotkey_show_clipboard() {
+    show_picker(0);
+}
+
+function show_picker(selected_index) {
     // Lazy-load current clipboard content if history is empty
     if (history.length === 0) {
         var text = ctx.clipboard.readText();
@@ -60,6 +64,7 @@ function on_hotkey_show_clipboard() {
         height: y + 10,
         position: "screen_center",
         auto_close: true,
+        selected_index: selected_index,
         draws: draws
     }));
 }
@@ -90,6 +95,23 @@ function export_to_xml() {
     }
     xml += '</clipboard-history>\n';
     return xml;
+}
+
+function on_clipboard_item_deleted(event) {
+    var idx = -1;
+    for (var i = 0; i < history.length; i++) {
+        if (history[i].id === event.id) {
+            idx = i;
+            history.splice(i, 1);
+            save_history();
+            ctx.log("debug", "deleted item " + event.id);
+            break;
+        }
+    }
+    // Re-open the picker with updated list, highlight same position
+    if (history.length > 0) {
+        show_picker(idx < history.length ? idx : history.length - 1);
+    }
 }
 
 function on_clipboard_item_selected(event) {

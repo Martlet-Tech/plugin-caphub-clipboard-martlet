@@ -7,5 +7,5 @@ description = "Clipboard history manager"
 mouse = true
 
 [events]
-subscribes = ["hotkey.show_clipboard", "clipboard.changed", "clipboard.item_selected", "plugin.activate", "plugin.action"]
+subscribes = ["hotkey.show_clipboard", "clipboard.changed", "clipboard.item_selected", "clipboard.item_deleted", "plugin.activate", "plugin.action"]
 publishes = []
