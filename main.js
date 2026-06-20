@@ -1,26 +1,49 @@
 var history = [];
+var nextId = 1;
 
 ctx.log("info", "clipboard plugin started");
 
-// Seeded test data
-history.push({ id: 1, text: "Hello CapaHub! Clipboard works.", time: "now" });
-history.push({ id: 2, text: "https://github.com/Martlet-Tech/CapaHub", time: "now" });
-history.push({ id: 3, text: "Ctrl+C to copy, Ctrl+Shift+V to paste", time: "now" });
-var nextId = 4;
+// Load history from storage
+var stored = ctx.storage.get("history");
+if (stored) {
+    try {
+        var parsed = JSON.parse(stored);
+        history = parsed.items || [];
+        nextId = parsed.nextId || 1;
+        ctx.log("info", "loaded " + history.length + " items from storage");
+    } catch (e) {
+        ctx.log("warn", "failed to parse stored history");
+    }
+} else {
+    ctx.log("info", "no stored history, starting fresh");
+}
+
+function save_history() {
+    ctx.storage.set("history", JSON.stringify({ items: history, nextId: nextId }));
+}
 
 // Called when clipboard content changes
 function on_clipboard_changed(text) {
     if (!text) return;
-    // Ignore if same as top of history (our own paste)
     if (history.length > 0 && history[0].text === text) return;
     ctx.log("debug", "stored: " + text.substring(0, 40));
     history.unshift({ id: nextId++, text: text, time: new Date().toLocaleTimeString() });
     if (history.length > 50) history.pop();
+    save_history();
 }
 
 // Called on Ctrl+Shift+V
 function on_hotkey_show_clipboard() {
-    if (history.length === 0) return;
+    // Lazy-load current clipboard content if history is empty
+    if (history.length === 0) {
+        var text = ctx.clipboard.readText();
+        if (text) {
+            history.unshift({ id: nextId++, text: text, time: new Date().toLocaleTimeString() });
+            save_history();
+        } else {
+            return;
+        }
+    }
     var draws = [];
     var y = 10;
     for (var i = 0; i < Math.min(history.length, 10); i++) {
@@ -46,6 +69,7 @@ function on_clipboard_item_selected(event) {
         if (history[i].id === event.id) {
             var item = history.splice(i, 1)[0];
             history.unshift(item);
+            save_history();
             ctx.clipboard.paste(item.text);
             return;
         }
