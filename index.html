@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clipboard Manager - CapaHub</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Microsoft YaHei", sans-serif;
+    background: #f5f5f5;
+    color: #333;
+    padding: 20px;
+}
+.card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+    padding: 24px;
+    margin-bottom: 16px;
+}
+h1 { font-size: 20px; font-weight: 600; }
+.version { color: #999; font-size: 12px; margin-bottom: 12px; }
+.desc { color: #666; font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
+hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
+h2 { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    background: #e8e8e8;
+    color: #333;
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+.btn-primary { background: #0066CC; color: #fff; }
+.btn-danger { background: #CC3333; color: #fff; }
+.btn:active { opacity: 0.8; }
+#log {
+    background: #f8f8f8;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 12px;
+    font-family: "Cascadia Code", "Consolas", monospace;
+    max-height: 200px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin-top: 10px;
+    color: #555;
+}
+#log .info { color: #0066CC; }
+#log .ok { color: #228B22; }
+#log .err { color: #CC3333; }
+.bridge-note {
+    background: #f0f7ff;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 12px;
+    color: #555;
+    line-height: 1.6;
+    margin-top: 12px;
+}
+.bridge-note code {
+    background: #e0e8f0;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+    <h1>Clipboard Manager</h1>
+    <div class="version">v0.1.0 — CapaHub Plugin</div>
+    <div class="desc">
+        Automatically records clipboard history. Press <kbd>Ctrl+Shift+V</kbd> to show the item picker.
+        History is persisted to SQLite via <code>ctx.storage</code>.
+    </div>
+
+    <hr>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" id="btnExport">Export History</button>
+        <button class="btn btn-danger" id="btnClear">Clear History</button>
+        <button class="btn" id="btnRefresh">Refresh</button>
+    </div>
+
+    <h2 style="margin-top:14px">Bridge Log</h2>
+    <div id="log">// Messages from Rust appear here</div>
+
+    <div class="bridge-note">
+        <strong>Rust ↔ JS Bridge</strong><br>
+        This <code>index.html</code> is rendered inside a WebView2 window.
+        Messages are sent via <code>window.chrome.webview.postMessage()</code>
+        and received by the Rust backend through <code>add_WebMessageReceived</code>.
+    </div>
+</div>
+
+<script>
+var log = document.getElementById("log");
+
+function logMsg(msg, cls) {
+    var line = document.createElement("div");
+    line.className = cls || "";
+    line.textContent = "> " + msg;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+}
+
+function postToRust(action, data) {
+    var msg = JSON.stringify({ action: action, data: data || {} });
+    logMsg("postMessage: " + msg, "info");
+    try {
+        window.chrome.webview.postMessage(msg);
+    } catch (e) {
+        logMsg("postMessage failed: " + e, "err");
+    }
+}
+
+document.getElementById("btnExport").onclick = function() {
+    postToRust("clipboard.export");
+};
+
+document.getElementById("btnClear").onclick = function() {
+    if (confirm("Clear all clipboard history?")) {
+        postToRust("clipboard.clear");
+    }
+};
+
+document.getElementById("btnRefresh").onclick = function() {
+    postToRust("clipboard.list");
+};
+
+// Listen for messages from Rust
+window.chrome.webview.addEventListener("message", function(e) {
+    logMsg("received: " + JSON.stringify(e.data), "ok");
+});
+
+logMsg("WebView2 initialized. Ready.", "ok");
+</script>
+
+</body>
+</html>
