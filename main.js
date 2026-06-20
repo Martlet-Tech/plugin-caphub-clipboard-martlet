@@ -64,6 +64,34 @@ function on_hotkey_show_clipboard() {
     }));
 }
 
+function on_plugin_action(event) {
+    if (event.plugin !== "clipboard") return;
+    if (event.action === "clipboard.clear") {
+        history = [];
+        save_history();
+        ctx.log("info", "history cleared via webview");
+    }
+    if (event.action === "clipboard.export") {
+        var xml = export_to_xml();
+        ctx.save_file_dialog(xml, "clipboard-history.xml");
+        ctx.log("info", "exported " + history.length + " items");
+    }
+}
+
+function export_to_xml() {
+    var xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<clipboard-history>\n';
+    for (var i = 0; i < history.length; i++) {
+        var item = history[i];
+        var text = item.text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        xml += '  <item id="' + item.id + '" time="' + item.time + '">\n';
+        xml += '    <![CDATA[' + text + ']]>\n';
+        xml += '  </item>\n';
+    }
+    xml += '</clipboard-history>\n';
+    return xml;
+}
+
 function on_clipboard_item_selected(event) {
     for (var i = 0; i < history.length; i++) {
         if (history[i].id === event.id) {
