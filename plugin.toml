@@ -1,0 +1,11 @@
+[plugin]
+name = "clipboard"
+version = "0.1.0"
+description = "Clipboard history manager"
+
+[hooks]
+mouse = true
+
+[events]
+subscribes = ["hotkey.show_clipboard", "clipboard.changed", "clipboard.item_selected"]
+publishes = []
